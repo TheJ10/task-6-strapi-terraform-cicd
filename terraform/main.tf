@@ -15,7 +15,7 @@ provider "aws" {
 # Security Group
 # -----------------------------
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name        = "strapi-sg-jaspal"
   description = "Allow SSH and Strapi"
 
   ingress {
