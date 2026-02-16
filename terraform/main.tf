@@ -41,12 +41,15 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+data "aws_ssm_parameter" "amazon_linux_2" {
+  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+}
 
 # -----------------------------
 # EC2 Instance
 # -----------------------------
 resource "aws_instance" "jaspal_strapi_ec2" {
-  ami                    = var.ami_id
+  ami = data.aws_ssm_parameter.amazon_linux_2.value
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.strapi_sg.id]
@@ -68,7 +71,10 @@ resource "aws_instance" "jaspal_strapi_ec2" {
             # Allow ec2-user to use Docker
             usermod -aG docker ec2-user
 
-            # Simple verification logs
+            # Restart Docker to apply group changes
+            systemctl restart docker
+
+            # Verification
             docker --version > /home/ec2-user/docker_installed.txt
             EOF
 
