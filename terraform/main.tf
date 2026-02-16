@@ -41,15 +41,12 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-data "aws_ssm_parameter" "amazon_linux_2" {
-  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
-}
 
 # -----------------------------
 # EC2 Instance
 # -----------------------------
 resource "aws_instance" "jaspal_strapi_ec2" {
-  ami = data.aws_ssm_parameter.amazon_linux_2.value
+  ami = "ami-0c1fe732b5494dc14"
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.strapi_sg.id]
@@ -59,10 +56,10 @@ resource "aws_instance" "jaspal_strapi_ec2" {
             set -e
 
             # Update system
-            yum update -y
+            dnf update -y
 
             # Install Docker
-            amazon-linux-extras install docker -y
+            dnf install -y docker
 
             # Start Docker
             systemctl start docker
