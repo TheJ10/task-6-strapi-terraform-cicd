@@ -1,0 +1,52 @@
+name: CD - Terraform Deploy Strapi
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve
+
+      - name: Get EC2 Public IP
+        id: ec2
+        working-directory: terraform
+        run: |
+          echo "ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+
+      - name: Deploy Strapi on EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.ec2.outputs.ip }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            docker stop strapi || true
+            docker rm strapi || true
+
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/strapi:latest
+
+            docker run -d -p 1337:1337 \
+              --name strapi \
+              -e NODE_ENV=production \
+              -e APP_KEYS=${{ secrets.APP_KEYS }} \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e ADMIN_JWT_SECRET=${{ secrets.ADMIN_JWT_SECRET }} \
+              -e API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }} \
+              -e TRANSFER_TOKEN_SALT=${{ secrets.TRANSFER_TOKEN_SALT }} \
+              -e ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/strapi:latest
