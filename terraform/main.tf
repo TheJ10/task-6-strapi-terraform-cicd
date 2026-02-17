@@ -52,28 +52,30 @@ resource "aws_instance" "jaspal_strapi_ec2" {
   vpc_security_group_ids = [aws_security_group.strapi_sg.id]
 
   user_data = <<-EOF
-            #!/bin/bash
-            set -e
+#!/bin/bash
+set -eux
 
-            # Update system
-            dnf update -y
+# Update system
+dnf update -y
 
-            # Install Docker
-            dnf install -y docker
+# Install Docker
+dnf install -y docker
 
-            # Start Docker
-            systemctl start docker
-            systemctl enable docker
+# Enable & start Docker
+systemctl enable docker
+systemctl start docker
 
-            # Allow ec2-user to use Docker
-            usermod -aG docker ec2-user
+# Ensure SSH service is running (CRITICAL)
+systemctl enable sshd
+systemctl start sshd
 
-            # Restart Docker to apply group changes
-            systemctl restart docker
+# Allow ec2-user to use Docker
+usermod -aG docker ec2-user
 
-            # Verification
-            docker --version > /home/ec2-user/docker_installed.txt
-            EOF
+# Verification
+docker --version > /home/ec2-user/docker_installed.txt
+systemctl status sshd > /home/ec2-user/sshd_status.txt
+EOF
 
 
   tags = {
