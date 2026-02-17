@@ -1,18 +1,15 @@
-name: CD - Terraform Deploy Strapi
+name: Terraform CD Deployment
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  terraform:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -21,39 +18,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Init
-        working-directory: terraform
         run: terraform init
+        working-directory: terraform
 
       - name: Terraform Apply
-        working-directory: terraform
-        run: terraform apply -auto-approve
-
-      - name: Get EC2 Public IP
-        id: ec2
-        working-directory: terraform
         run: |
-          echo "ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
-
-      - name: Deploy Strapi on EC2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ steps.ec2.outputs.ip }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          script: |
-            docker stop strapi || true
-            docker rm strapi || true
-
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/strapi:latest
-
-            docker run -d -p 1337:1337 \
-              --name strapi \
-              -e NODE_ENV=production \
-              -e APP_KEYS=${{ secrets.APP_KEYS }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e ADMIN_JWT_SECRET=${{ secrets.ADMIN_JWT_SECRET }} \
-              -e API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }} \
-              -e TRANSFER_TOKEN_SALT=${{ secrets.TRANSFER_TOKEN_SALT }} \
-              -e ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/strapi:latest
+          terraform apply -auto-approve \
+            -var="aws_region=${{ secrets.AWS_REGION }}" \
+            -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
+            -var="docker_image=${{ secrets.DOCKERHUB_USERNAME }}/strapi:latest" \
+            -var="admin_jwt_secret=${{ secrets.ADMIN_JWT_SECRET }}" \
+            -var="api_token_salt=${{ secrets.API_TOKEN_SALT }}" \
+            -var="app_keys=${{ secrets.APP_KEYS }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+        working-directory: terraform
