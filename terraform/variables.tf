@@ -15,3 +15,22 @@ variable "instance_type" {
   type        = string
   default     = "t2.micro"
 }
+variable "docker_image" {
+  type = string
+}
+
+variable "admin_jwt_secret" {
+  type = string
+}
+
+variable "api_token_salt" {
+  type = string
+}
+
+variable "app_keys" {
+  type = string
+}
+
+variable "jwt_secret" {
+  type = string
+}
